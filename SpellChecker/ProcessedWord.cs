@@ -13,14 +13,9 @@ namespace SpellChecker
         public int LineNumber;
         public int ColumnNumber;
         public int LocationInText;
-        public int NumberOfSymbolsRemovedFromBeginningOfText;
+        public int NumSymbolsRemovedFromBeginningOfWord;
         public bool IsStartOfSentence;
         public string[]? SpellingSuggestions;
-
-        public ProcessedWord(string word)
-        {
-            Word = word;
-        }
 
     }
 }

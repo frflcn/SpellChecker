@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -52,21 +53,27 @@ namespace SpellChecker
         }
 
 
-        public bool IsMisSpelled(string word) //Check if the word is in the dictionary, is a number, is a date, or a time
+        public bool IsMisspelled(ProcessedWord word) //Check if the word is in the dictionary, is a number, is a date, or a time
         {
-            if (DictionaryDictionary.Contains(word))
+            if (DictionaryDictionary.Contains(word.Word))
+            {
+                return false;
+            }
+
+            //If the word is the start of a sentence check it's lowercase version as well
+            if (word.IsStartOfSentence && DictionaryDictionary.Contains(word.Word.ToLower()))
             {
                 return false;
             }
 
             double tempDouble;
-            if (Double.TryParse(word, out tempDouble))
+            if (Double.TryParse(word.Word, out tempDouble))
             {
                 return false;
             }
 
             DateTime tempDateTime;
-            if (DateTime.TryParse(word, out tempDateTime))
+            if (DateTime.TryParse(word.Word, out tempDateTime))
             {
                 return false;
             }
@@ -213,15 +220,7 @@ namespace SpellChecker
                 sortedWords.Add(new List<string>());
             }
             word = " " + word;
-            //EditDistanceMatrix = new int[word.Length, LongestWordLength + 1];
-            //for (int index = 0; index < word.Length; ++index)
-            //{
-            //    EditDistanceMatrix[index, 0] = index;
-            //}
-            //for (int index = 1; index < LongestWordLength + 1; ++index)
-            //{
-            //    EditDistanceMatrix[0, index] = index;
-            //}
+
             InitEditDistanceMatrix(word);
             int editDistance;
             editDistance = _EditDistanceNew(word, Dictionary[0]);
@@ -267,7 +266,7 @@ namespace SpellChecker
                 lengthIndex = Math.Max(0, lengthIndex);
                 closestJump = lastWord.JumpToNextWords[lengthIndex]!;
                 thisWord = lastWord.NextDictionaryWords[lengthIndex]!;
-                for (++lengthIndex; lengthIndex < word.Length + highestScore - 2 && lengthIndex < LongestWordLength; ++lengthIndex) //Closely Examine the start and stop points they're probably wrong
+                for (++lengthIndex; lengthIndex < word.Length + highestScore - 2 && lengthIndex < LongestWordLength; ++lengthIndex) 
                 {
                     if (lastWord.JumpToNextWords[lengthIndex] < closestJump)
                     {
@@ -333,15 +332,6 @@ namespace SpellChecker
         public string ClosestWord(string word)
         {
             word = " " + word;
-            //EditDistanceMatrix = new int[word.Length, LongestWordLength + 1];
-            //for (int index = 0; index < word.Length; ++index)
-            //{
-            //    EditDistanceMatrix[index, 0] = index;
-            //}
-            //for (int index = 1; index < LongestWordLength + 1; ++index)
-            //{
-            //    EditDistanceMatrix[0, index] = index;
-            //}
             InitEditDistanceMatrix(word);
             int leastDistance = int.MaxValue;
             string closestWord = "";
@@ -364,47 +354,6 @@ namespace SpellChecker
         private int _EditDistance(string s1, string s2)
         {
             return _EditDistance(s1, s2, 0);
-        }
-
-        private int _EditDistanceTrevor(string userWord, string dictionaryWord, int reuseLetters)
-        {
-            for (int dictionaryIndex = 1 + reuseLetters; dictionaryIndex < dictionaryWord.Length; ++dictionaryIndex)
-            {
-                for (int userIndex = 1; userIndex < userWord.Length; ++userIndex)
-                {
-                    if (userWord[userIndex] == dictionaryWord[dictionaryIndex])
-                    {
-                        EditDistanceMatrix[userIndex, dictionaryIndex] = EditDistanceMatrix[userIndex - 1, dictionaryIndex - 1];
-                    }
-                    else
-                    {
-                        if (EditDistanceMatrix[userIndex - 1, dictionaryIndex] < EditDistanceMatrix[userIndex - 1, dictionaryIndex - 1])
-                        {
-                            if (EditDistanceMatrix[userIndex - 1, dictionaryIndex] < EditDistanceMatrix[userIndex, dictionaryIndex - 1])
-                            {
-                                EditDistanceMatrix[userIndex, dictionaryIndex] = EditDistanceMatrix[userIndex - 1, dictionaryIndex] + 1;
-                            }
-                            else
-                            {
-                                EditDistanceMatrix[userIndex, dictionaryIndex] = EditDistanceMatrix[userIndex, dictionaryIndex - 1] + 1;
-                            }
-                        }
-                        else
-                        {
-                            if (EditDistanceMatrix[userIndex - 1, dictionaryIndex - 1] < EditDistanceMatrix[userIndex, dictionaryIndex - 1])
-                            {
-                                EditDistanceMatrix[userIndex, dictionaryIndex] = EditDistanceMatrix[userIndex - 1, dictionaryIndex - 1] + 1;
-                            }
-                            else
-                            {
-                                EditDistanceMatrix[userIndex, dictionaryIndex] = EditDistanceMatrix[userIndex, dictionaryIndex - 1] + 1;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return EditDistanceMatrix[userWord.Length - 1, dictionaryWord.Length - 1];
         }
 
 
@@ -501,47 +450,61 @@ namespace SpellChecker
 
         public void CheckText(string text, int route = 0)
         {
+            //Split text into lines, then split into words keeping track of the location of all words, then process words
             (string line, int location)[] lines = SpecializedSplit(text, ['\n', '\r', '\f']);
             (string word, int column)[][] words = new (string, int)[lines.Length][];
-            (string word, int numSymbolsRemovedFromBeginningOfWord, bool isBeginningOfSentence)[][] processedWords = new (string word, int numSymbolsRemovedFromBeginningOfWord, bool isBeginningOfSentence)[lines.Length][];
+            ProcessedWord[][] processedWords = new ProcessedWord[lines.Length][];
             for (int lineIndex = 0; lineIndex < lines.Length; ++lineIndex)
             {
                 words[lineIndex] = SpecializedSplit(lines[lineIndex].line, [' ', '\t', '\v']);
-                processedWords[lineIndex] = new (string word, int numSymbolsRemovedFromBeginningOfWord, bool isBeginningOfSentence)[words[lineIndex].Length];
+                processedWords[lineIndex] = new ProcessedWord[words[lineIndex].Length];
                 for (int wordIndex = 0; wordIndex < words[lineIndex].Length; ++wordIndex)
                 {
-                    processedWords[lineIndex][wordIndex] = ProcessWord(words[lineIndex][wordIndex].word, text, lines[lineIndex].location + words[lineIndex][wordIndex].column);
+                    processedWords[lineIndex][wordIndex] = ProcessWord(words[lineIndex][wordIndex].word, text, lineIndex, lines[lineIndex].location, words[lineIndex][wordIndex].column);
                 }
             }
-            List<(string word, int lineNumber, int column, int location, int numSymbolsRemovedFromBeginningOfWord)> misspelledWords =
-                            new List<(string word, int lineNumber, int column, int location, int numSymbolsRemovedFromBeginningOfWord)>();
 
+
+            //Check if words are misspelled
+            List<ProcessedWord> misspelledWords =
+                            new List<ProcessedWord>();
             for (int lineIndex = 0; lineIndex < lines.Length; ++lineIndex)
             {
                 for (int wordIndex = 0; wordIndex < words[lineIndex].Length; ++wordIndex)
                 {
-                    if (IsMisSpelled(processedWords[lineIndex][wordIndex].word))
+                    if (IsMisspelled(processedWords[lineIndex][wordIndex]))
                     {
-                        misspelledWords.Add((processedWords[lineIndex][wordIndex].word,                                     //Word
-                                            lineIndex + 1,                                                                  //Line
-                                            words[lineIndex][wordIndex].column,                                             //Column
-                                            lines[lineIndex].location + words[lineIndex][wordIndex].column,                 //Location
-                                            processedWords[lineIndex][wordIndex].numSymbolsRemovedFromBeginningOfWord));    //NumSymbolsRemovedFromBeginningOfWord
+                        misspelledWords.Add(processedWords[lineIndex][wordIndex]);    
                     }
                 }
             }
+
+            //Print Data about misspelled words
+            PrintMisspellings(text, misspelledWords, route);
+
+        }
+
+        public void PrintMisspellings(string text, List<ProcessedWord> misspelledWords, int route = 0)
+        {
             Console.WriteLine($"SpellChecker 5000:");
             Console.WriteLine($"\nNumber of Misspelled Words: {misspelledWords.Count}\n");
+
             for (int misspelledWordIndex = 0; misspelledWordIndex < misspelledWords.Count; ++misspelledWordIndex)
             {
+                //Print word, Line Number and Column Number
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(misspelledWords[misspelledWordIndex].word);
-                Console.ForegroundColor= ConsoleColor.Green;
-                Console.WriteLine($"Line: {misspelledWords[misspelledWordIndex].lineNumber}  Column: {misspelledWords[misspelledWordIndex].column}");
+                Console.WriteLine(misspelledWords[misspelledWordIndex].Word);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"Line: {misspelledWords[misspelledWordIndex].LineNumber}  Column: {misspelledWords[misspelledWordIndex].ColumnNumber}");
+
+
+
+
+                //Print context around misspelled word
                 Console.ForegroundColor = ConsoleColor.Blue;
                 Console.WriteLine("Context:");
-                int beginningOfContext = misspelledWords[misspelledWordIndex].location - 20;
-                int endOfContext = beginningOfContext + misspelledWords[misspelledWordIndex].word.Length + 40;
+                int beginningOfContext = misspelledWords[misspelledWordIndex].LocationInText - 20;
+                int endOfContext = beginningOfContext + misspelledWords[misspelledWordIndex].Word.Length + 40;
 
                 //Adjust for words near the beginning or end of the text
                 if (beginningOfContext < 0)
@@ -553,27 +516,31 @@ namespace SpellChecker
                 {
                     endOfContext = text.Length;
                 }
+
+                //Print context before word
                 Console.ForegroundColor = ConsoleColor.White;
+                Console.Write($"{text.Substring(beginningOfContext,
+                    misspelledWords[misspelledWordIndex].LocationInText
+                    - beginningOfContext
+                    + misspelledWords[misspelledWordIndex].NumSymbolsRemovedFromBeginningOfWord)}");
 
-                Console.Write($"{text.Substring(beginningOfContext, 
-                    misspelledWords[misspelledWordIndex].location 
-                    - beginningOfContext 
-                    + misspelledWords[misspelledWordIndex].numSymbolsRemovedFromBeginningOfWord)}");
-
+                //Print misspelled word in context as red
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.Write($"{misspelledWords[misspelledWordIndex].word}");
+                Console.Write($"{misspelledWords[misspelledWordIndex].Word}");
+                
+                //Print context after word
                 Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine($"{text.Substring(misspelledWords[misspelledWordIndex].LocationInText
+                    + misspelledWords[misspelledWordIndex].Word.Length
+                    + misspelledWords[misspelledWordIndex].NumSymbolsRemovedFromBeginningOfWord,
 
-                Console.WriteLine($"{
-                    text.Substring(misspelledWords[misspelledWordIndex].location 
-                    + misspelledWords[misspelledWordIndex].word.Length
-                    + misspelledWords[misspelledWordIndex].numSymbolsRemovedFromBeginningOfWord,
-                    
-                    endOfContext 
-                    - misspelledWords[misspelledWordIndex].location 
-                    - misspelledWords[misspelledWordIndex].word.Length
+                    endOfContext
+                    - misspelledWords[misspelledWordIndex].LocationInText
+                    - misspelledWords[misspelledWordIndex].Word.Length
                     )}");
 
+
+                //Print suggested Words
                 Console.ForegroundColor = ConsoleColor.Blue;
                 Console.WriteLine("Suggested Words:");
                 Console.ForegroundColor = ConsoleColor.White;
@@ -582,15 +549,15 @@ namespace SpellChecker
                 string[] suggestedWords;
                 if (route == 0)
                 {
-                    suggestedWords = ClosestWords(misspelledWords[misspelledWordIndex].word, 10);
+                    suggestedWords = ClosestWords(misspelledWords[misspelledWordIndex].Word, 10);
                 }
                 else if (route == 1)
                 {
-                    suggestedWords = ClosestWordsNew(misspelledWords[misspelledWordIndex].word, 10);
+                    suggestedWords = ClosestWordsNew(misspelledWords[misspelledWordIndex].Word, 10);
                 }
                 else
                 {
-                    suggestedWords = ClosestWordsNewNew(misspelledWords[misspelledWordIndex].word, 10);
+                    suggestedWords = ClosestWordsNewNew(misspelledWords[misspelledWordIndex].Word, 10);
                 }
                 sw.Stop();
                 for (int suggestedWordIndex = 0; suggestedWordIndex < suggestedWords.Length; ++suggestedWordIndex)
@@ -605,8 +572,9 @@ namespace SpellChecker
 
 
 
-        private (string processedWord, int numSymbolsRemovedFromBeginningOfWord, bool isBeginningOfSentence) ProcessWord(string word, string text, int locationOfWord)
+        private ProcessedWord ProcessWord(string word, string text, int lineNumber, int lineLocation, int columnLocation)
         {
+            //Document number of symbols removed from the beginning of word, used later for pretty printing
             char[] symbolList = ['`', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '{', '}', '[', ']', '\\', '|', ':', ';', '"', '\'', ',', '<', '>', '.', '?', '/'];
             int numSymbolsRemovedFromBeginningOfWord = 0;
             for (int letterIndex = 0; letterIndex < word.Length; ++letterIndex)
@@ -620,27 +588,40 @@ namespace SpellChecker
                     break;
                 }
             }
+
+            //Check if word is the beginning of a sentence, used for spellchecking
             bool isBeginningOfSentence = false;
-            int charIndex = locationOfWord - 1;
+            int charIndex = lineLocation + columnLocation - 1;
             char[] punctuationList = ['.', '!', '?'];
             while (charIndex >= 0 && text[charIndex] == ' ')
             {
-                --locationOfWord;
+                --charIndex;
             }
             if (charIndex < 0 || punctuationList.Contains(text[charIndex]))
             {
                 isBeginningOfSentence = true;
             }
+
+
+            //Remove symbols from either side of word
             word = word.Trim(symbolList);
-            string lowerCaseWord = word.ToLower();
-            return (lowerCaseWord, numSymbolsRemovedFromBeginningOfWord, isBeginningOfSentence);
+
+            //string lowerCaseWord = word.ToLower();
+            return new ProcessedWord() {
+                Word = word,
+                NumSymbolsRemovedFromBeginningOfWord = numSymbolsRemovedFromBeginningOfWord,
+                IsStartOfSentence = isBeginningOfSentence,
+                LineNumber = lineNumber,
+                ColumnNumber = columnLocation,
+                LocationInText = columnLocation + lineLocation
+            };
         }
 
 
 
 
         /// <summary>
-        /// Splits a string according to the provided deliminator and returns an array of tuples holding the split string and the loaction the string appears in the provided text
+        /// Splits a string according to the provided deliminator and returns an array of tuples holding the split string and the location the string appears in the provided text
         /// </summary>
         /// <param name="text">the text to split</param>
         /// <param name="delim">the deliminator</param>
@@ -688,7 +669,7 @@ namespace SpellChecker
 
 
         /// <summary>
-        /// Splits a string according to the provided deliminators and returns an array of tuples holding the split string and the loaction the string appears in the provided text
+        /// Splits a string according to the provided deliminators and returns an array of tuples holding the split string and the location the string appears in the provided text
         /// </summary>
         /// <param name="text">the text to split</param>
         /// <param name="delims">an array of deliminators</param>

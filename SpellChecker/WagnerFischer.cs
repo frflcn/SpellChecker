@@ -80,125 +80,6 @@ namespace SpellChecker
             return true;
         }
 
-        /// <summary>
-        /// Returns an array of words that are closest to the word to check
-        /// </summary>
-        /// <param name="word">The word to check</param>
-        /// <param name="returnCount">The number of words to return</param>
-        /// <returns>An array of words closest to the word to check</returns>
-        public (string word, int score)[] ClosestWords(string word, int returnCount)
-        {
-            if (returnCount <= 0)
-            {
-                throw new Exception("num must be greater than zero");
-            }
-
-            int largestDistance = LongestWordLength > word.Length ? LongestWordLength : word.Length;
-            List<List<string>> sortedWords = new List<List<string>>(largestDistance + 1);
-            for (int index = 0; index < largestDistance + 1; ++index)
-            {
-                sortedWords.Add(new List<string>());
-            }
-            word = " " + word;
-            EditDistanceMatrix = new int[word.Length, LongestWordLength + 1];
-            for (int index = 0; index < word.Length; ++index)
-            {
-                EditDistanceMatrix[index, 0] = index;
-            }
-            for (int index = 1; index < LongestWordLength + 1; ++index)
-            {
-                EditDistanceMatrix[0, index] = index;
-            }
-            int editDistance;
-            for (int index = 0; index < Dictionary.Length; ++index)
-            {
-                editDistance = _EditDistance(word, Dictionary[index]);
-                sortedWords[editDistance].Add(Dictionary[index]);
-            }
-            int wordsLeft = returnCount;
-            (string word, int score)[] suggestedWords = new (string, int)[returnCount];
-            for (int scoreIndex = 0; scoreIndex < largestDistance + 1; ++scoreIndex)
-            {
-                for (int wordIndex = 0; wordIndex < sortedWords[scoreIndex].Count; ++wordIndex)
-                {
-                    suggestedWords[returnCount-wordsLeft] = (sortedWords[scoreIndex][wordIndex], scoreIndex);
-                    if (--wordsLeft == 0)
-                    {
-                        return suggestedWords;
-                    }
-                }
-            }
-            return suggestedWords;
-        }
-
-
-        /// <summary>
-        /// Returns an array of words that are closest to the word to check
-        /// </summary>
-        /// <param name="word">The word to check</param>
-        /// <param name="returnCount">The number of words to return</param>
-        /// <returns>An array of words closest to the word to check</returns>
-        public (string word, int score)[] ClosestWordsNew(string word, int returnCount, bool newRoute = false)
-        {
-            if (returnCount <= 0)
-            {
-                throw new Exception("returnCount must be greater than zero");
-            }
-
-            int largestDistance = LongestWordLength > word.Length ? LongestWordLength : word.Length;
-            List<List<string>> sortedWords = new List<List<string>>(largestDistance + 1);
-            for (int index = 0; index < largestDistance + 1; ++index)
-            {
-                sortedWords.Add(new List<string>());
-            }
-            word = " " + word;
-            EditDistanceMatrix = new int[word.Length, LongestWordLength + 1];
-            for (int index = 0; index < word.Length; ++index)
-            {
-                EditDistanceMatrix[index, 0] = index;
-            }
-            for (int index = 1; index < LongestWordLength + 1; ++index)
-            {
-                EditDistanceMatrix[0, index] = index;
-            }
-            int editDistance;
-            editDistance = _EditDistance(word, Dictionary[0]);
-            sortedWords[editDistance].Add(Dictionary[0]);
-            string lastWord = Dictionary[0];
-            int greatestCommonCharacters;
-            for (int index = 1; index < Dictionary.Length; ++index)
-            {
-                greatestCommonCharacters = 0;
-
-                while (greatestCommonCharacters + 1 < lastWord.Length &&
-                       greatestCommonCharacters + 1 < Dictionary[index].Length &&
-                       lastWord[greatestCommonCharacters + 1] == Dictionary[index][greatestCommonCharacters + 1])
-                {
-                    greatestCommonCharacters++;
-                }
-
-
-                editDistance = _EditDistance(word, Dictionary[index], greatestCommonCharacters);
-                sortedWords[editDistance].Add(Dictionary[index]);
-                lastWord = Dictionary[index];
-
-            }
-            int wordsLeft = returnCount;
-            (string word, int score)[] suggestedWords = new (string, int)[returnCount];
-            for (int scoreIndex = 0; scoreIndex < largestDistance + 1; ++scoreIndex)
-            {
-                for (int wordIndex = 0; wordIndex < sortedWords[scoreIndex].Count; ++wordIndex)
-                {
-                    suggestedWords[returnCount - wordsLeft] = (sortedWords[scoreIndex][wordIndex], scoreIndex);
-                    if (--wordsLeft == 0)
-                    {
-                        return suggestedWords;
-                    }
-                }
-            }
-            return suggestedWords;
-        }
-
 
         /// <summary>
         /// Returns an array of words that are closest to the word to check
@@ -328,29 +209,6 @@ namespace SpellChecker
 
 
 
-
-        public string ClosestWord(string word)
-        {
-            word = " " + word;
-            InitEditDistanceMatrix(word);
-            int leastDistance = int.MaxValue;
-            string closestWord = "";
-            int distance = 0;
-            for (int index = 0; index < Dictionary.Length; ++index)
-            {
-                distance = _EditDistance(word, Dictionary[index]);
-                if (distance < leastDistance)
-                {
-                    closestWord = Dictionary[index];
-                    leastDistance = distance;
-                }
-            }
-            return closestWord;
-        }
-
-
-
-
         private int _EditDistance(string userWord, string dictionaryWord)
         {
             return _EditDistance(userWord, dictionaryWord, 0);
@@ -420,7 +278,7 @@ namespace SpellChecker
 
 
 
-        public void CheckText(string text, int route = 0, int suggestedWordReturnCount = 10)
+        public void CheckText(string text, int suggestedWordReturnCount = 10)
         {
             //Split text into lines, then split into words keeping track of the location of all words, then process words
             (string line, int location)[] lines = SpecializedSplit(text, ['\n', '\r', '\f']);
@@ -452,11 +310,11 @@ namespace SpellChecker
             }
 
             //Print Data about misspelled words
-            PrintMisspellings(text, misspelledWords, route);
+            PrintMisspellings(text, misspelledWords);
 
         }
 
-        public void PrintMisspellings(string text, List<ProcessedWord> misspelledWords, int route = 0, int suggestedWordReturnCount = 10)
+        public void PrintMisspellings(string text, List<ProcessedWord> misspelledWords, int suggestedWordReturnCount = 10)
         {
             Console.WriteLine($"SpellChecker 5000:");
             Console.WriteLine($"\nNumber of Misspelled Words: {misspelledWords.Count}\n");
@@ -519,18 +377,8 @@ namespace SpellChecker
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
                 List<(string word, int score)> suggestedWords;
-                if (route == 0)
-                {
-                    suggestedWords = ClosestWords(misspelledWords[misspelledWordIndex].Word, suggestedWordReturnCount).ToList();
-                }
-                else if (route == 1)
-                {
-                    suggestedWords = ClosestWordsNew(misspelledWords[misspelledWordIndex].Word, suggestedWordReturnCount).ToList();
-                }
-                else
-                {
-                    suggestedWords = ClosestWordsNewNew(misspelledWords[misspelledWordIndex].Word, suggestedWordReturnCount).ToList();
-                }
+
+                suggestedWords = ClosestWordsNewNew(misspelledWords[misspelledWordIndex].Word, suggestedWordReturnCount).ToList();
                 
                 if (misspelledWords[misspelledWordIndex].IsStartOfSentence)
                 {

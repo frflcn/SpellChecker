@@ -636,54 +636,7 @@ namespace SpellChecker
                 LocationInText = columnLocation + lineLocation
             };
         }
-
-
-
-
-        /// <summary>
-        /// Splits a string according to the provided deliminator and returns an array of tuples holding the split string and the location the string appears in the provided text
-        /// </summary>
-        /// <param name="text">the text to split</param>
-        /// <param name="delim">the deliminator</param>
-        /// <returns>An array of tuples holding a string and the location the string appears in the provided text</returns>
-        private (string, int)[] SpecializedSplit(string text, char delim)
-        {
-            int location = 0;
-            List<(string, int)> stringsAndLocations = new List<(string, int)> ();
-
-            //Ignore prevailing deliminators
-            for (; location < text.Length; ++location)
-            {
-                if (text[location] != delim)
-                {
-                    break;
-                }
-            }
-
-            for (int index = location + 1; index < text.Length; ++index)
-            {
-                if (text[index] == delim)
-                {
-                    stringsAndLocations.Add((text.Substring(location, index - location), location));
-                    for (++index; index < text.Length; ++index)
-                    {
-                        if (text[index] != delim)
-                        {
-                            break;
-                        }
-                    }
-                    location = index;
-                }
-            }
-            if (location < text.Length)
-            {
-                stringsAndLocations.Add((text.Substring(location, text.Length - location), location));
-            }
-
-            return stringsAndLocations.ToArray();
-
-        }
-    
+ 
 
 
 

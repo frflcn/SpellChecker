@@ -25,20 +25,20 @@ namespace SpellChecker
 
 
 
-            sw.Restart();
-            wagner.CheckText(textToCheck);
-            sw.Stop();
-            TimeSpan first = sw.Elapsed;
-            sw.Restart();
-            wagner.CheckText(textToCheck, 1);
-            sw.Stop();
-            TimeSpan second = sw.Elapsed;
+            //sw.Restart();
+            //wagner.CheckText(textToCheck);
+            //sw.Stop();
+            //TimeSpan first = sw.Elapsed;
+            //sw.Restart();
+            //wagner.CheckText(textToCheck, 1);
+            //sw.Stop();
+            //TimeSpan second = sw.Elapsed;
             sw.Restart();
             wagner.CheckText(textToCheck, 2);
             sw.Stop();
             TimeSpan third = sw.Elapsed;
-            Console.WriteLine($"Elapsed1: {first}");
-            Console.WriteLine($"Elapsed2: {second}");
+            //Console.WriteLine($"Elapsed1: {first}");
+            //Console.WriteLine($"Elapsed2: {second}");
             Console.WriteLine($"Elapsed3: {third}");
 
 
@@ -52,39 +52,39 @@ namespace SpellChecker
             Console.WriteLine(word);
             while (true)
             {
-                sw.Restart();
-                string[] words = wagner.ClosestWords(word, 10);
-                sw.Stop();
-                Console.WriteLine($"Words: Elapsed: {sw.Elapsed}");
+                //sw.Restart();
+                //(string word, int score)[] words = wagner.ClosestWords(word, 10);
+                //sw.Stop();
+                //Console.WriteLine($"Words: Elapsed: {sw.Elapsed}");
+
+                //sw.Restart();
+                //(string word, int score)[] newWords = wagner.ClosestWordsNew(word, 10, true);
+                //sw.Stop();
+                //Console.WriteLine($"WordsNew: Elapsed: {sw.Elapsed}");
 
                 sw.Restart();
-                string[] newWords = wagner.ClosestWordsNew(word, 10, true);
-                sw.Stop();
-                Console.WriteLine($"WordsNew: Elapsed: {sw.Elapsed}");
-
-                sw.Restart();
-                string[] newNewWords = wagner.ClosestWordsNewNew(word, 10);
+                (string word, int score)[] newNewWords = wagner.ClosestWordsNewNew(word, 10);
                 sw.Stop();
                 Console.WriteLine($"WordsNewNew: Elapsed: {sw.Elapsed}");
 
-                Console.Write($"Words:");
+                //Console.Write($"Words:");
 
-                for (int i = 0; i < newWords.Length; ++i)
-                {
-                    Console.Write($" {words[i]}");
+                //for (int i = 0; i < newWords.Length; ++i)
+                //{
+                //    Console.Write($" {words[i].word}");
 
-                }
-                Console.Write($"\nNewWd:");
-                for (int i = 0; i < newWords.Length; ++i)
-                {
+                //}
+                //Console.Write($"\nNewWd:");
+                //for (int i = 0; i < newWords.Length; ++i)
+                //{
 
-                    Console.Write($" {newWords[i]}");
-                }
+                //    Console.Write($" {newWords[i].word}");
+                //}
                 Console.Write($"\nNNwWd:");
-                for (int i = 0; i < newWords.Length; ++i)
+                for (int i = 0; i < newNewWords.Length; ++i)
                 {
 
-                    Console.Write($" {newNewWords[i]}");
+                    Console.Write($" {newNewWords[i].word}");
                 }
                 Console.WriteLine("\n");
                 word = Console.ReadLine();

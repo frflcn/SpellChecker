@@ -8,4 +8,6 @@ To make things even more dificult, some words have irregular spellings that dont
 
 Its also worth mentioning that auto-correct features sometimes introduce erors by changing words to the wrong sugestions, especially when dealing with names or uncommen terms.
 
-Testing your spellchecker with diverse and realistic misspellings will help ensure it can corectly identify and address a wide range of issues.
+Teting your spellchecker with diverse and realistic misspellings will help ensure it can corectly identify and address a wide range of issues.
+
+Alexanfer

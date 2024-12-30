@@ -86,7 +86,7 @@ namespace SpellChecker
         /// <param name="word">The word to check</param>
         /// <param name="returnCount">The number of words to return</param>
         /// <returns>An array of words closest to the word to check</returns>
-        public string[] ClosestWords(string word, int returnCount)
+        public (string word, int score)[] ClosestWords(string word, int returnCount)
         {
             if (returnCount <= 0)
             {
@@ -116,12 +116,12 @@ namespace SpellChecker
                 sortedWords[editDistance].Add(Dictionary[index]);
             }
             int wordsLeft = returnCount;
-            string[] suggestedWords = new string[returnCount];
-            for (int index1 = 0; index1 < largestDistance + 1; ++index1)
+            (string word, int score)[] suggestedWords = new (string, int)[returnCount];
+            for (int scoreIndex = 0; scoreIndex < largestDistance + 1; ++scoreIndex)
             {
-                for (int index2 = 0; index2 < sortedWords[index1].Count; ++index2)
+                for (int wordIndex = 0; wordIndex < sortedWords[scoreIndex].Count; ++wordIndex)
                 {
-                    suggestedWords[returnCount-wordsLeft] = sortedWords[index1][index2];
+                    suggestedWords[returnCount-wordsLeft] = (sortedWords[scoreIndex][wordIndex], scoreIndex);
                     if (--wordsLeft == 0)
                     {
                         return suggestedWords;
@@ -138,7 +138,7 @@ namespace SpellChecker
         /// <param name="word">The word to check</param>
         /// <param name="returnCount">The number of words to return</param>
         /// <returns>An array of words closest to the word to check</returns>
-        public string[] ClosestWordsNew(string word, int returnCount, bool newRoute = false)
+        public (string word, int score)[] ClosestWordsNew(string word, int returnCount, bool newRoute = false)
         {
             if (returnCount <= 0)
             {
@@ -162,7 +162,7 @@ namespace SpellChecker
                 EditDistanceMatrix[0, index] = index;
             }
             int editDistance;
-            editDistance = newRoute ? _EditDistanceNew(word, Dictionary[0]) : _EditDistance(word, Dictionary[0]);
+            editDistance = _EditDistanceNew(word, Dictionary[0]);
             sortedWords[editDistance].Add(Dictionary[0]);
             string lastWord = Dictionary[0];
             int greatestCommonCharacters;
@@ -178,18 +178,18 @@ namespace SpellChecker
                 }
 
 
-                editDistance = newRoute ? _EditDistanceNew(word, Dictionary[index], greatestCommonCharacters) : _EditDistance(word, Dictionary[index], greatestCommonCharacters);
+                editDistance = _EditDistanceNew(word, Dictionary[index], greatestCommonCharacters);
                 sortedWords[editDistance].Add(Dictionary[index]);
                 lastWord = Dictionary[index];
 
             }
             int wordsLeft = returnCount;
-            string[] suggestedWords = new string[returnCount];
-            for (int index1 = 0; index1 < largestDistance + 1; ++index1)
+            (string word, int score)[] suggestedWords = new (string, int)[returnCount];
+            for (int scoreIndex = 0; scoreIndex < largestDistance + 1; ++scoreIndex)
             {
-                for (int index2 = 0; index2 < sortedWords[index1].Count; ++index2)
+                for (int wordIndex = 0; wordIndex < sortedWords[scoreIndex].Count; ++wordIndex)
                 {
-                    suggestedWords[returnCount - wordsLeft] = sortedWords[index1][index2];
+                    suggestedWords[returnCount - wordsLeft] = (sortedWords[scoreIndex][wordIndex], scoreIndex);
                     if (--wordsLeft == 0)
                     {
                         return suggestedWords;
@@ -206,7 +206,7 @@ namespace SpellChecker
         /// <param name="word">The word to check</param>
         /// <param name="returnCount">The number of words to return</param>
         /// <returns>An array of words closest to the word to check</returns>
-        public string[] ClosestWordsNewNew(string word, int returnCount, bool newRoute = false)
+        public (string word, int score)[] ClosestWordsNewNew(string word, int returnCount, bool newRoute = false)
         {
             if (returnCount <= 0)
             {
@@ -310,12 +310,12 @@ namespace SpellChecker
 
             }
             wordsLeft = returnCount;
-            string[] suggestedWords = new string[returnCount];
-            for (int index1 = 0; index1 < largestDistance + 1; ++index1)
+            (string word, int score)[] suggestedWords = new (string word, int score)[returnCount];
+            for (int scoreIndex = 0; scoreIndex < largestDistance + 1; ++scoreIndex)
             {
-                for (int index2 = 0; index2 < sortedWords[index1].Count; ++index2)
+                for (int wordIndex = 0; wordIndex < sortedWords[scoreIndex].Count; ++wordIndex)
                 {
-                    suggestedWords[returnCount - wordsLeft] = sortedWords[index1][index2];
+                    suggestedWords[returnCount - wordsLeft] = (sortedWords[scoreIndex][wordIndex], scoreIndex);
                     if (--wordsLeft == 0)
                     {
                         return suggestedWords;
@@ -448,7 +448,7 @@ namespace SpellChecker
 
 
 
-        public void CheckText(string text, int route = 0)
+        public void CheckText(string text, int route = 0, int suggestedWordReturnCount = 10)
         {
             //Split text into lines, then split into words keeping track of the location of all words, then process words
             (string line, int location)[] lines = SpecializedSplit(text, ['\n', '\r', '\f']);
@@ -484,7 +484,7 @@ namespace SpellChecker
 
         }
 
-        public void PrintMisspellings(string text, List<ProcessedWord> misspelledWords, int route = 0)
+        public void PrintMisspellings(string text, List<ProcessedWord> misspelledWords, int route = 0, int suggestedWordReturnCount = 10)
         {
             Console.WriteLine($"SpellChecker 5000:");
             Console.WriteLine($"\nNumber of Misspelled Words: {misspelledWords.Count}\n");
@@ -546,23 +546,71 @@ namespace SpellChecker
                 Console.ForegroundColor = ConsoleColor.White;
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
-                string[] suggestedWords;
+                List<(string word, int score)> suggestedWords;
                 if (route == 0)
                 {
-                    suggestedWords = ClosestWords(misspelledWords[misspelledWordIndex].Word, 10);
+                    suggestedWords = ClosestWords(misspelledWords[misspelledWordIndex].Word, suggestedWordReturnCount).ToList();
                 }
                 else if (route == 1)
                 {
-                    suggestedWords = ClosestWordsNew(misspelledWords[misspelledWordIndex].Word, 10);
+                    suggestedWords = ClosestWordsNew(misspelledWords[misspelledWordIndex].Word, suggestedWordReturnCount).ToList();
                 }
                 else
                 {
-                    suggestedWords = ClosestWordsNewNew(misspelledWords[misspelledWordIndex].Word, 10);
+                    suggestedWords = ClosestWordsNewNew(misspelledWords[misspelledWordIndex].Word, suggestedWordReturnCount).ToList();
                 }
-                sw.Stop();
-                for (int suggestedWordIndex = 0; suggestedWordIndex < suggestedWords.Length; ++suggestedWordIndex)
+                
+                if (misspelledWords[misspelledWordIndex].IsStartOfSentence)
                 {
-                    Console.Write($"{suggestedWords[suggestedWordIndex]} ");
+                    List<(string word, int score)> lowerCaseSuggestedWords = ClosestWordsNewNew(misspelledWords[misspelledWordIndex].Word.ToLower(), suggestedWordReturnCount).ToList();
+
+                    //Remove Duplicates
+                    int lowerCaseIndex;
+                    int upperCaseIndex;
+                    for (upperCaseIndex = 0; upperCaseIndex < suggestedWords.Count; ++upperCaseIndex)
+                    {
+                        for (lowerCaseIndex = 0; lowerCaseIndex < lowerCaseSuggestedWords.Count; ++lowerCaseIndex)
+                        {
+                            if (suggestedWords[upperCaseIndex].word == lowerCaseSuggestedWords[lowerCaseIndex].word)
+                            {
+                                if (suggestedWords[upperCaseIndex].score < lowerCaseSuggestedWords[lowerCaseIndex].score)
+                                {
+                                    lowerCaseSuggestedWords.RemoveAt(lowerCaseIndex);
+                                    --lowerCaseIndex;
+                                }
+                                else
+                                {
+                                    suggestedWords.RemoveAt(upperCaseIndex);
+                                    --upperCaseIndex;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    List<(string word, int score)> tempSuggestedWords = new List<(string word, int score)>();
+                    lowerCaseIndex = 0;
+                    upperCaseIndex = 0;
+                    for (int wordsLeft = 0; wordsLeft < suggestedWordReturnCount; ++wordsLeft)
+                    {
+                        if (suggestedWords[upperCaseIndex].score < lowerCaseSuggestedWords[lowerCaseIndex].score)
+                        {
+                            tempSuggestedWords.Add(suggestedWords[upperCaseIndex]);
+                            ++upperCaseIndex;
+                        }
+                        else
+                        {
+                            tempSuggestedWords.Add(lowerCaseSuggestedWords[lowerCaseIndex]);
+                            ++lowerCaseIndex;
+                        }
+                    }
+                    suggestedWords = tempSuggestedWords;
+                    
+                }
+               
+                sw.Stop();
+                for (int suggestedWordIndex = 0; suggestedWordIndex < suggestedWords.Count; ++suggestedWordIndex)
+                {
+                    Console.Write($"{suggestedWords[suggestedWordIndex].word.Substring(1)} ");
                 }
                 Console.WriteLine($"\nElapsed: {sw.Elapsed.ToString()}");
                 Console.Write("\n\n");
@@ -593,11 +641,11 @@ namespace SpellChecker
             bool isBeginningOfSentence = false;
             int charIndex = lineLocation + columnLocation - 1;
             char[] punctuationList = ['.', '!', '?'];
-            while (charIndex >= 0 && text[charIndex] == ' ')
+            while (charIndex >= 0 && Char.IsWhiteSpace(text[charIndex]))
             {
                 --charIndex;
             }
-            if (charIndex < 0 || punctuationList.Contains(text[charIndex]))
+            if (charIndex < 0 || punctuationList.Contains(text[charIndex]) || text[charIndex] == '"')
             {
                 isBeginningOfSentence = true;
             }

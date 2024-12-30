@@ -162,7 +162,7 @@ namespace SpellChecker
                 EditDistanceMatrix[0, index] = index;
             }
             int editDistance;
-            editDistance = _EditDistanceNew(word, Dictionary[0]);
+            editDistance = _EditDistance(word, Dictionary[0]);
             sortedWords[editDistance].Add(Dictionary[0]);
             string lastWord = Dictionary[0];
             int greatestCommonCharacters;
@@ -178,7 +178,7 @@ namespace SpellChecker
                 }
 
 
-                editDistance = _EditDistanceNew(word, Dictionary[index], greatestCommonCharacters);
+                editDistance = _EditDistance(word, Dictionary[index], greatestCommonCharacters);
                 sortedWords[editDistance].Add(Dictionary[index]);
                 lastWord = Dictionary[index];
 
@@ -223,7 +223,7 @@ namespace SpellChecker
 
             InitEditDistanceMatrix(word);
             int editDistance;
-            editDistance = _EditDistanceNew(word, Dictionary[0]);
+            editDistance = _EditDistance(word, Dictionary[0]);
             sortedWords[editDistance].Add(Dictionary[0]);
             DictionaryWord lastWord = DictionaryWords[0];
             int greatestCommonCharacters;
@@ -239,7 +239,7 @@ namespace SpellChecker
                 }
       
                
-                editDistance = newRoute ? _EditDistanceNew(word, Dictionary[index], greatestCommonCharacters) : _EditDistance(word, Dictionary[index], greatestCommonCharacters);
+                editDistance = _EditDistance(word, Dictionary[index], greatestCommonCharacters);
                 sortedWords[editDistance].Add(Dictionary[index]);
                 lastWord = DictionaryWords[index];
 
@@ -285,7 +285,7 @@ namespace SpellChecker
                 {
                     greatestCommonCharacters++;
                 }
-                editDistance = _EditDistanceNew(word, thisWord.Word, greatestCommonCharacters);
+                editDistance = _EditDistance(word, thisWord.Word, greatestCommonCharacters);
                 if (editDistance < highestScore)
                 {
                     sortedWords[editDistance].Add(thisWord.Word);
@@ -351,9 +351,9 @@ namespace SpellChecker
 
 
 
-        private int _EditDistance(string s1, string s2)
+        private int _EditDistance(string userWord, string dictionaryWord)
         {
-            return _EditDistance(s1, s2, 0);
+            return _EditDistance(userWord, dictionaryWord, 0);
         }
 
 
@@ -383,34 +383,6 @@ namespace SpellChecker
         }
 
 
-        private int _EditDistanceNew(string s1, string s2)
-        {
-            return _EditDistanceNew(s1, s2, 0);
-        }
-
-        private int _EditDistanceNew(string userWord, string dictionaryWord, int reuseLetters)
-        {
-            for (int dictionaryIndex = 1 + reuseLetters; dictionaryIndex < dictionaryWord.Length; ++dictionaryIndex)
-            {
-                for (int userIndex = 1; userIndex < userWord.Length; ++userIndex)
-                {
-                    if (userWord[userIndex] == dictionaryWord[dictionaryIndex])
-                    {
-                        EditDistanceMatrix[userIndex, dictionaryIndex] = EditDistanceMatrix[userIndex - 1, dictionaryIndex - 1];
-                    }
-                    else
-                    {
-                        int dictionaryMinus1 = EditDistanceMatrix[userIndex, dictionaryIndex - 1];
-                        int userMinus1 = EditDistanceMatrix[userIndex - 1, dictionaryIndex];
-                        int dictionaryUserMinus1 = EditDistanceMatrix[userIndex - 1, dictionaryIndex - 1];
-
-                        EditDistanceMatrix[userIndex, dictionaryIndex] = Math.Min(dictionaryMinus1, Math.Min(userMinus1, dictionaryUserMinus1)) + 1;
-                    }
-                }
-            }
-
-            return EditDistanceMatrix[userWord.Length - 1, dictionaryWord.Length - 1];
-        }
 
         public int EditDistance(string s1, string s2)
         {

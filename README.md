@@ -85,6 +85,6 @@ If you want to use the built-in dictionary you can just pass in a file-to-check.
 ## Download
 
 You can download your operating system specific SpellChecker [here](https://github.com/frflcn/SpellChecker/releases/tag/v1.0)<br/>
-Just be sure to include your operating specific suffix on the command-line, if you don't change the filename eg.:<br/>
+Just be sure to include your operating system specific suffix on the command-line, if you don't change the filename eg.:<br/>
 ./SpellChecker-linux-arm dictionary.txt text-to-check.txt
 

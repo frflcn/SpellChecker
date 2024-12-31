@@ -12,7 +12,7 @@ Note that the WagnerFischer algorithm does not consider a swap as an operation:
 - Swap
   - S***RT***ING -> S***TR***ING
  
-The way the WagnerFischer Algorithm is calculated is by a matrix like so:
+The way the WagnerFischer Algorithm is calculated is by a matrix like so:<br/>
 ![WagnerFischer Completed](https://github.com/user-attachments/assets/7eb95d0f-c0a9-45a2-847f-722fec425c5c)<br/>
 Where every cell correlates to the edit distance between the portions of the words it represents<br/><br/>
 
@@ -64,14 +64,20 @@ Using both of these speedups, in total I managed to speed the algorithm up anywh
 4. Each word is checked to see if it is the start of the sentence so that it may be screened for both lowercase words and proper nouns later on
 5. Each word is searched against the (word)dictionary(code)dictionary to see if it is misspelled
 6. All misspelled words are then put through the WagnerFischer algorithm to return a list of suggested words
-7. The Details are then printed out to the user
+7. The Details are then printed out to the user<br/><br/>
 
 ## Future Improvements
-There are three areas that I see could be improved in the Spellchecker:
+There are three areas that I see could be improved on in the Spellchecker:
 - UI
   - [ ] Allow the user to select the suggested word and have the spellchecker edit the text inplace
+  - [ ] Have the context end, at the beginning or end of a word rather than in the middle of a word
 - Speed
   - [ ] Start the search with words in the dictionary matching the first letter of the word to spellcheck
   - [ ] Start the search with words with length close to the length of the word being spellchecked, then broaden the search if needed
 - Accuracy
-  - [ ] Include swaps as well as insertions, deletions and substitutions as part of the edit distance. Only calculate this more accurate but slower edit distance for suggested words already scored low
+  - [ ] Include swaps as well as insertions, deletions and substitutions, as part of the edit distance. Only calculate this more accurate but slower edit distance for suggested words already scored low
+
+## Usage
+SpellChecker [[dictionary.txt] file-to-check.txt]<br/><br/>
+
+If you want to use the built-in dictionary you can just pass in a file-to-check.txt. If you want to use your own dictionary, pass it in before the file-to-check.txt. The only requirement for the dictionary is that it is newline deliminated. For best results all words in the dictionary should be lowercase except for proper nouns.

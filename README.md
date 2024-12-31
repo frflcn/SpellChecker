@@ -30,11 +30,11 @@ The first row and column is just 0, 1, 2, 3... as it takes one more insertion to
 
 Each successive cell is calculated as such: if the letters are the same, the cell is equal to the cell to the upper left diagonal<br/>
 ![WagnerFischer LettersAreSame](https://github.com/user-attachments/assets/e4ecce89-a184-4316-8da8-c1447f930797)<br/>
-'c' == 'c' therefore, Yellow cell is equal to the red cell<br/><br/>
+'c' == 'c' therefore, Yellow cell is assigned the red cell value<br/><br/>
 
 If the letters are different the cell is equal to the minimum of the three cells up, left and up-left diagonal plus one:<br/>
 ![WagnerFischer LettersAreDifferent](https://github.com/user-attachments/assets/63f027c0-4de8-4a7a-b60f-fbf75d40feab)<br/>
-'c' != 'a' therefore, Yellow cell is equal to Min(0, 1, 2) + 1<br/><br/>
+'c' != 'a' therefore, Yellow cell is assigned to Min(0, 1, 2) + 1<br/><br/>
 
 This is carried on until the matrix is complete and the final distance is the cell in the bottom right corner<br/>
 ![WagnerFischer Complete](https://github.com/user-attachments/assets/6f796da2-9537-48ca-a220-4babd2dd161a)<br/>

@@ -22,7 +22,7 @@ This cell correlates to the distance between "cat" and "carpet"<br/>
 And this cell correlates to the distance between "catch" and "carpet"<br/>
 ![WagnerFischer catch-carpet](https://github.com/user-attachments/assets/21a9d9db-949e-4508-979f-8727c8331be0)<br/><br/>
 
-To Setup the Matrix, write each word with a space in front down each axis like so:<br/>
+To Setup the Matrix, write each word with a space in front, down each axis like so:<br/>
 ![WagnerFischer Empty](https://github.com/user-attachments/assets/ea8c1e88-e07f-4051-b779-3b5390b805ea)<br/><br/>
 
 The first row and column is just 0, 1, 2, 3... as it takes one more insertion to get from the empty string to the next portion of the word.<br/>

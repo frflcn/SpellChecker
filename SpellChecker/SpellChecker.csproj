@@ -7,4 +7,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="scowl-60.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="scowl-60.txt" />
+  </ItemGroup>
+
 </Project>

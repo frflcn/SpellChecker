@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
@@ -15,20 +16,19 @@ namespace SpellChecker
         private int LongestWordLength { get; set; }
         private int[,] EditDistanceMatrix { get; set; }
         private HashSet<string> DictionaryDictionary { get; set; }
-
         public DictionaryWord[] DictionaryWords{ get; set; }
 
 
 
         public WagnerFischer(string dictionary)
         {
-            SetDictionary(dictionary);
+            SetUpDictionary(dictionary);
         }
 
 
 
 
-        public void SetDictionary(string dictionary)
+        public void SetUpDictionary(string dictionary)
         {
             DictionaryDictionary = new HashSet<string>();
             Dictionary = dictionary.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -45,10 +45,102 @@ namespace SpellChecker
                 Dictionary[index] = " " + Dictionary[index];
                 DictionaryWords[index] = new DictionaryWord(Dictionary[index]);
             }
-            DictionaryWords[0].FindNextWords(DictionaryWords, 0, LongestWordLength);
+            FindNextWords(DictionaryWords[0], 0, LongestWordLength);
             for (int index = 1; index < DictionaryWords.Length; ++index)
             {
-                DictionaryWords[index].FindNextWords(DictionaryWords, index, DictionaryWords[index - 1]);
+                FindNextWords(DictionaryWords[index], DictionaryWords[index - 1]);
+            }
+        }
+
+        /// <summary>
+        /// Initializes DictionaryWord
+        /// For each length, finds the next word in DictionaryWords and stores it along with the distance to it in the DictionaryWord
+        /// </summary>
+        /// <param name="word">The DictionaryWord to Initialize</param>
+        /// <param name="wordIndex">The index at which the word lives in</param>
+        /// <param name="longestWordLength">The longest word in DictionaryWords</param>
+        public void FindNextWords(DictionaryWord word, int wordIndex, int longestWordLength)
+        {
+            word.Index = wordIndex;
+            word.NextDictionaryWords = new DictionaryWord[longestWordLength];
+            word.JumpToNextWords = new int[longestWordLength];
+            for (int lengthIndex = 0; lengthIndex < longestWordLength; ++lengthIndex)
+            {
+                word.JumpToNextWords[lengthIndex] = int.MaxValue;
+            }
+            //For each length find the next word
+            for (++wordIndex; wordIndex < DictionaryWords.Length; ++wordIndex)
+            {
+                if (word.NextDictionaryWords[DictionaryWords[wordIndex].Word.Length - 2] == null)
+                {
+                    word.NextDictionaryWords[DictionaryWords[wordIndex].Word.Length - 2] = DictionaryWords[wordIndex];
+                    word.JumpToNextWords[DictionaryWords[wordIndex].Word.Length - 2] = wordIndex - word.Index;
+                }
+            }
+            //Search the beginning of the array if words haven't been found
+            for (wordIndex = 0; wordIndex < word.Index; ++wordIndex)
+            {
+                if (word.NextDictionaryWords[DictionaryWords[wordIndex].Word.Length - 2] == null)
+                {
+                    word.NextDictionaryWords[DictionaryWords[wordIndex].Word.Length - 2] = DictionaryWords[wordIndex];
+                    word.JumpToNextWords[DictionaryWords[wordIndex].Word.Length - 2] = wordIndex + DictionaryWords.Length - wordIndex;
+                }
+            }
+        }
+        /// <summary>
+        /// Initializes DictionaryWord
+        /// For each length, finds the next word in DictionaryWords and stores it along with the distance to it in the DictionaryWord
+        /// Using the prevDictionaryWord as a starting point
+        /// </summary>
+        /// <param name="word">The DictionaryWord to Initialize</param>
+        /// <param name="prevDictionaryWord">The previous DictionaryWords</param>
+        public void FindNextWords(DictionaryWord word, DictionaryWord prevDictionaryWord)
+        {
+            //Use the previous DictionaryWord as a starting point
+            int wordIndex = prevDictionaryWord.Index + 1;
+            word.Index = wordIndex;
+            word.NextDictionaryWords = new DictionaryWord?[prevDictionaryWord.NextDictionaryWords.Length];
+            prevDictionaryWord.NextDictionaryWords.CopyTo(word.NextDictionaryWords, 0);
+            word.JumpToNextWords = new int[prevDictionaryWord.JumpToNextWords.Length];
+            prevDictionaryWord.JumpToNextWords.CopyTo(word.JumpToNextWords, 0);
+            for (int lengthIndex = 0; lengthIndex < word.JumpToNextWords.Length; ++lengthIndex)
+            {
+                if (word.JumpToNextWords[lengthIndex] != int.MaxValue)
+                {
+                    --word.JumpToNextWords[lengthIndex];
+                }
+            }
+
+
+            //Only need to search for the next word of the same length
+            for (++wordIndex; wordIndex < DictionaryWords.Length; ++wordIndex)
+            {
+                if (DictionaryWords[wordIndex].Word.Length == word.Word.Length)
+                {
+                    word.NextDictionaryWords[word.Word.Length - 2] = DictionaryWords[wordIndex];
+                    word.JumpToNextWords[word.Word.Length - 2] = wordIndex - word.Index;
+                    return;
+                }
+            }
+            //Search the beginning of the array if a word hasnt been found yet
+            for (wordIndex = 0; wordIndex <= word.Index; wordIndex++)
+            {
+                if (DictionaryWords[wordIndex].Word.Length == word.Word.Length)
+                {
+                    if (wordIndex != word.Index)
+                    {
+                        word.NextDictionaryWords[word.Word.Length - 2] = DictionaryWords[wordIndex];
+                        word.JumpToNextWords[word.Word.Length - 2] = wordIndex + (DictionaryWords.Length - word.Index);
+                        return;
+                    }
+                    else
+                    {
+                        word.NextDictionaryWords[word.Word.Length - 2] = null;
+                        word.JumpToNextWords[word.Word.Length - 2] = int.MaxValue;
+                        return;
+                    }
+
+                }
             }
         }
 
@@ -87,13 +179,14 @@ namespace SpellChecker
         /// <param name="word">The word to check</param>
         /// <param name="returnCount">The number of words to return</param>
         /// <returns>An array of words closest to the word to check</returns>
-        public (string word, int score)[] ClosestWordsNewNew(string word, int returnCount, bool newRoute = false)
+        public (string word, int score)[] ClosestWords(string word, int returnCount)
         {
             if (returnCount <= 0)
             {
                 throw new Exception("returnCount must be greater than zero");
             }
 
+            //Initializations
             int largestDistance = LongestWordLength > word.Length ? LongestWordLength : word.Length;
             List<List<string>> sortedWords = new List<List<string>>(largestDistance + 1);
             for (int index = 0; index < largestDistance + 1; ++index)
@@ -101,52 +194,62 @@ namespace SpellChecker
                 sortedWords.Add(new List<string>());
             }
             word = " " + word;
-
             InitEditDistanceMatrix(word);
-            int editDistance;
-            editDistance = _EditDistance(word, Dictionary[0]);
+
+
+            //Grab the first x suggestions, where x is the number of words to return
+            int editDistance = _EditDistance(word, Dictionary[0]);
             sortedWords[editDistance].Add(Dictionary[0]);
             DictionaryWord lastWord = DictionaryWords[0];
             int greatestCommonCharacters;
-            for (int index = 1; index < returnCount; ++index)
+            for (int wordIndex = 1; wordIndex < returnCount; ++wordIndex)
             {
                 greatestCommonCharacters = 0;
 
                 while (greatestCommonCharacters + 1 < lastWord.Word.Length &&
-                       greatestCommonCharacters + 1 < Dictionary[index].Length &&
-                       lastWord.Word[greatestCommonCharacters + 1] == Dictionary[index][greatestCommonCharacters + 1])
+                       greatestCommonCharacters + 1 < Dictionary[wordIndex].Length &&
+                       lastWord.Word[greatestCommonCharacters + 1] == Dictionary[wordIndex][greatestCommonCharacters + 1])
                 {
                     greatestCommonCharacters++; 
                 }
-      
-               
-                editDistance = _EditDistance(word, Dictionary[index], greatestCommonCharacters);
-                sortedWords[editDistance].Add(Dictionary[index]);
-                lastWord = DictionaryWords[index];
-
+                editDistance = _EditDistance(word, Dictionary[wordIndex], greatestCommonCharacters);
+                sortedWords[editDistance].Add(Dictionary[wordIndex]);
+                lastWord = DictionaryWords[wordIndex];
             }
-            int wordsLeft = returnCount;
+
+
+
+            //Find the highest score of the suggestions already calculated
+            int wordsLeftBeforeRescore = returnCount;
             int highestScore = 0;
             for (int scoreIndex = 0;  scoreIndex < largestDistance + 1; ++scoreIndex)
             {
-                wordsLeft -= sortedWords[scoreIndex].Count;
-                if (wordsLeft == 0)
+                wordsLeftBeforeRescore -= sortedWords[scoreIndex].Count;
+                if (wordsLeftBeforeRescore == 0)
                 {
                     highestScore = scoreIndex;
-                    wordsLeft = sortedWords[scoreIndex].Count;
+                    wordsLeftBeforeRescore = sortedWords[scoreIndex].Count;
                     break;
                 }
             }
+
+
+
+            //Repeatedly narrow the search to only the words with length close enough to
+            //the word's length to have a chance at a score better than the words already found
             int lengthIndex = word.Length - highestScore - 1;
             lengthIndex = Math.Max(0, lengthIndex);
             DictionaryWord thisWord = lastWord.NextDictionaryWords[lengthIndex]!;
             int closestJump =  lastWord.JumpToNextWords[lengthIndex]!;
+            int wordsLeftToAddToArray;
             while (true)
             {
                 lengthIndex = word.Length - highestScore - 1;
                 lengthIndex = Math.Max(0, lengthIndex);
                 closestJump = lastWord.JumpToNextWords[lengthIndex]!;
                 thisWord = lastWord.NextDictionaryWords[lengthIndex]!;
+
+                //Find the next word with appropriate length to check 
                 for (++lengthIndex; lengthIndex < word.Length + highestScore - 2 && lengthIndex < LongestWordLength; ++lengthIndex) 
                 {
                     if (lastWord.JumpToNextWords[lengthIndex] < closestJump)
@@ -155,10 +258,14 @@ namespace SpellChecker
                         thisWord = lastWord.NextDictionaryWords[lengthIndex]!;
                     }
                 }
+
+                //If thisWord is null there are no more valid words, if thisWord.Index < lastWord.Index we've searched the entire dictionary
                 if (thisWord == null || thisWord.Index < lastWord.Index)
                 {
                     break;
                 }
+
+                //Check the number of common characters between the lastWord and thisWord to pass to _EditDistance to speed up algorithm
                 greatestCommonCharacters = 0;
                 while (greatestCommonCharacters + 1 < lastWord.Word.Length &&
                        greatestCommonCharacters + 1 < thisWord.Word.Length &&
@@ -167,20 +274,22 @@ namespace SpellChecker
                     greatestCommonCharacters++;
                 }
                 editDistance = _EditDistance(word, thisWord.Word, greatestCommonCharacters);
+
+                //If The score is good enough add the word to sortedWords and adjust the highestScore as needed
                 if (editDistance < highestScore)
                 {
                     sortedWords[editDistance].Add(thisWord.Word);
-                    --wordsLeft;
-                    if (wordsLeft == 0)
+                    --wordsLeftBeforeRescore;
+                    if (wordsLeftBeforeRescore == 0)
                     {
-                        wordsLeft = returnCount;
+                        wordsLeftToAddToArray = returnCount;
                         for (int scoreIndex = 0; scoreIndex < largestDistance + 1; ++scoreIndex)
                         {
-                            wordsLeft -= sortedWords[scoreIndex].Count;
-                            if (wordsLeft <= 0)
+                            wordsLeftToAddToArray -= sortedWords[scoreIndex].Count; //Not actually adding to array, just counting for now
+                            if (wordsLeftToAddToArray <= 0)
                             {
                                 highestScore = scoreIndex;
-                                wordsLeft = sortedWords[scoreIndex].Count + wordsLeft;
+                                wordsLeftBeforeRescore = sortedWords[scoreIndex].Count + wordsLeftToAddToArray;
                                 break;
                             }
                         }
@@ -190,14 +299,16 @@ namespace SpellChecker
                 lastWord = thisWord;
 
             }
-            wordsLeft = returnCount;
+            wordsLeftToAddToArray = returnCount;
+
+            //Grab the top suggestions in sortedWords
             (string word, int score)[] suggestedWords = new (string word, int score)[returnCount];
             for (int scoreIndex = 0; scoreIndex < largestDistance + 1; ++scoreIndex)
             {
                 for (int wordIndex = 0; wordIndex < sortedWords[scoreIndex].Count; ++wordIndex)
                 {
-                    suggestedWords[returnCount - wordsLeft] = (sortedWords[scoreIndex][wordIndex], scoreIndex);
-                    if (--wordsLeft == 0)
+                    suggestedWords[returnCount - wordsLeftToAddToArray] = (sortedWords[scoreIndex][wordIndex], scoreIndex);
+                    if (--wordsLeftToAddToArray == 0)
                     {
                         return suggestedWords;
                     }
@@ -208,14 +319,25 @@ namespace SpellChecker
 
 
 
-
+        /// <summary>
+        /// Checks the edit distance between two words
+        /// </summary>
+        /// <param name="userWord"></param>
+        /// <param name="dictionaryWord"></param>
+        /// <returns>The edit distance between two words</returns>
         private int _EditDistance(string userWord, string dictionaryWord)
         {
             return _EditDistance(userWord, dictionaryWord, 0);
         }
 
 
-
+        /// <summary>
+        /// Checks the edit distance between two words and reuses parts of the EditDistanceMatrix for the dictionaryWord
+        /// </summary>
+        /// <param name="userWord">the users word to check</param>
+        /// <param name="dictionaryWord">the dictionary word to check</param>
+        /// <param name="reuseLetters">the number of letters to reuse in EditDistanceMatrix for the dictionaryWord</param>
+        /// <returns>the edit distance between the two words</returns>
         private int _EditDistance(string userWord, string dictionaryWord, int reuseLetters)
         {
             for (int dictionaryIndex = 1 + reuseLetters; dictionaryIndex < dictionaryWord.Length; ++dictionaryIndex)
@@ -242,26 +364,10 @@ namespace SpellChecker
 
 
 
-        public int EditDistance(string s1, string s2)
-        {
-            s1 = " " + s1;
-            s2 = " " + s2;
-            EditDistanceMatrix = new int[s1.Length, s2.Length];
-            for (int index = 0; index < s1.Length; ++index)
-            {
-                EditDistanceMatrix[index, 0] = index;
-            }
-            for (int index = 1; index < s2.Length; ++index)
-            {
-                EditDistanceMatrix[0, index] = index;
-            }
-
-            return _EditDistance(s1, s2);
-
-        }
-
-
-
+        /// <summary>
+        /// Initializes the EditDistanceMatrix used in the WagnerFischer Algorithm
+        /// </summary>
+        /// <param name="userWord">The users's word with a leading space</param>
         private void InitEditDistanceMatrix(string userWord)
         {
             EditDistanceMatrix = new int[userWord.Length, LongestWordLength + 1];
@@ -277,7 +383,11 @@ namespace SpellChecker
 
 
 
-
+        /// <summary>
+        /// Checks the provided text for any misspellings against the dictionary and prints information about suggested words
+        /// </summary>
+        /// <param name="text">the text to check</param>
+        /// <param name="suggestedWordReturnCount">the number of suggested words to print per misspelled word</param>
         public void CheckText(string text, int suggestedWordReturnCount = 10)
         {
             //Split text into lines, then split into words keeping track of the location of all words, then process words
@@ -325,7 +435,7 @@ namespace SpellChecker
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(misspelledWords[misspelledWordIndex].Word);
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Line: {misspelledWords[misspelledWordIndex].LineNumber}  Column: {misspelledWords[misspelledWordIndex].ColumnNumber}");
+                Console.WriteLine($"Line: {misspelledWords[misspelledWordIndex].LineNumber}  Column: {misspelledWords[misspelledWordIndex].ColumnNumber}\n");
 
 
 
@@ -372,17 +482,17 @@ namespace SpellChecker
 
                 //Print suggested Words
                 Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine("Suggested Words:");
+                Console.WriteLine("\nSuggested Words:");
                 Console.ForegroundColor = ConsoleColor.White;
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
                 List<(string word, int score)> suggestedWords;
 
-                suggestedWords = ClosestWordsNewNew(misspelledWords[misspelledWordIndex].Word, suggestedWordReturnCount).ToList();
+                suggestedWords = ClosestWords(misspelledWords[misspelledWordIndex].Word, suggestedWordReturnCount).ToList();
                 
+
+                //If the word is start of sentence, check it's lowercase version as well
                 if (misspelledWords[misspelledWordIndex].IsStartOfSentence)
                 {
-                    List<(string word, int score)> lowerCaseSuggestedWords = ClosestWordsNewNew(misspelledWords[misspelledWordIndex].Word.ToLower(), suggestedWordReturnCount).ToList();
+                    List<(string word, int score)> lowerCaseSuggestedWords = ClosestWords(misspelledWords[misspelledWordIndex].Word.ToLower(), suggestedWordReturnCount).ToList();
 
                     //Remove Duplicates
                     int lowerCaseIndex;
@@ -407,6 +517,8 @@ namespace SpellChecker
                             }
                         }
                     }
+
+                    //Merge uppercase and lowercase suggestions
                     List<(string word, int score)> tempSuggestedWords = new List<(string word, int score)>();
                     lowerCaseIndex = 0;
                     upperCaseIndex = 0;
@@ -427,19 +539,26 @@ namespace SpellChecker
                     
                 }
                
-                sw.Stop();
                 for (int suggestedWordIndex = 0; suggestedWordIndex < suggestedWords.Count; ++suggestedWordIndex)
                 {
                     Console.Write($"{suggestedWords[suggestedWordIndex].word.Substring(1)} ");
                 }
-                Console.WriteLine($"\nElapsed: {sw.Elapsed.ToString()}");
-                Console.Write("\n\n");
+
+                Console.Write("\n\n\n\n\n");
 
             }
         }
 
 
-
+        /// <summary>
+        /// Removes leading and trailing symbols, checks if it starts a sentence and packs all of this including its location in a ProcessedWord
+        /// </summary>
+        /// <param name="word">the word to be processed</param>
+        /// <param name="text">the text the words lives in</param>
+        /// <param name="lineNumber">the line number the word is located at</param>
+        /// <param name="lineLocation">the index at which the line starts at within the text</param>
+        /// <param name="columnLocation">the index of the start of the word within its line</param>
+        /// <returns>a ProcessedWord</returns>
         private ProcessedWord ProcessWord(string word, string text, int lineNumber, int lineLocation, int columnLocation)
         {
             //Document number of symbols removed from the beginning of word, used later for pretty printing
@@ -533,5 +652,8 @@ namespace SpellChecker
             return stringsAndLocations.ToArray();
 
         }
+
+
+        
     }
 }

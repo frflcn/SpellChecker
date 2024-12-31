@@ -1,8 +1,5 @@
-﻿using System.Collections;
-using System.Diagnostics;
-using System.Reflection;
-using System.Resources;
-using System.Timers;
+﻿using System.Reflection;
+
 
 namespace SpellChecker
 {

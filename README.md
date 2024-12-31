@@ -81,3 +81,10 @@ There are three areas that I see could be improved on in the Spellchecker:
 SpellChecker [[dictionary.txt] file-to-check.txt]<br/><br/>
 
 If you want to use the built-in dictionary you can just pass in a file-to-check.txt. If you want to use your own dictionary, pass it in before the file-to-check.txt. The only requirement for the dictionary is that it is newline deliminated. For best results all words in the dictionary should be lowercase except for proper nouns.
+
+## Download
+
+You can download your operating system specific SpellChecker [here](https://github.com/frflcn/SpellChecker/releases/tag/v1.0)<br/>
+Just be sure to include your operating specific suffix on the command-line, if you don't change the filename eg.:<br/>
+./SpellChecker-linux-arm dictionary.txt text-to-check.txt
+
